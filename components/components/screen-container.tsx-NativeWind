@@ -1,0 +1,21 @@
+import { View, ViewProps, StyleProp, ViewStyle } from "react-native";
+
+type ScreenContainerProps = ViewProps & {
+  children?: React.ReactNode;
+  containerStyle?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
+};
+
+export function ScreenContainer({
+  children,
+  containerStyle,
+  contentStyle,
+  style,
+  ...rest
+}: ScreenContainerProps) {
+  return (
+    <View style={[{ flex: 1 }, containerStyle, style]} {...rest}>
+      <View style={contentStyle}>{children}</View>
+    </View>
+  );
+}
