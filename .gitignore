@@ -1,1 +1,8 @@
+<<<<<<< HEAD
 node_modules
+=======
+git branch -M main
+git remote add origin https://github.com/ZoooooL/malaz.git
+git push -u origin main
+
+>>>>>>> 8af166cae350e836cb2ba0370ea05ff1f4a2bf6e
