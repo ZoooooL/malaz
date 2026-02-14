@@ -1,18 +1,22 @@
-name: Build Android APK
+name: Build Android App
+
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm install
@@ -20,8 +24,8 @@ jobs:
       - name: Build Android
         run: npx expo export --platform android --non-interactive
 
-      - name: Upload APK
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: malaz-app-release
-          path: dist/**
+          path: dist/
