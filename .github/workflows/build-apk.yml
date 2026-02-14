@@ -15,14 +15,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: 'npm'
 
       - name: Install Dependencies
         run: npm install
 
       - name: Build Android
-        run: npx expo export --platform android --non-interactive
+        run: |
+          export CI=1
+          npx expo export --platform android
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
