@@ -1,20 +1,24 @@
-import { View, ViewProps } from "react-native";
+import React from "react";
+import { View, ViewProps, StyleProp, ViewStyle } from "react-native";
 
 type ScreenContainerProps = ViewProps & {
   children?: React.ReactNode;
-  className?: string;
-  containerClassName?: string;
+  /** ستايل الحاوية الخارجية */
+  containerStyle?: StyleProp<ViewStyle>;
+  /** ستايل المحتوى الداخلي */
+  contentStyle?: StyleProp<ViewStyle>;
 };
 
 export function ScreenContainer({
   children,
-  className,
-  containerClassName,
+  containerStyle,
+  contentStyle,
+  style,
   ...rest
 }: ScreenContainerProps) {
   return (
-    <View style={{ flex: 1 }} className={containerClassName} {...rest}>
-      <View className={className}>{children}</View>
+    <View style={[{ flex: 1 }, containerStyle, style]} {...rest}>
+      <View style={contentStyle}>{children}</View>
     </View>
   );
 }
