@@ -14,20 +14,14 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
-
       - name: Install Dependencies
         run: npm install
 
-      - name: Build Android Local
-        run: npx expo run:android --variant release --no-install
-        continue-on-error: true
+      - name: Build Android
+        run: npx expo export --platform android --non-interactive
 
-    - name: Upload Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: malaz-app-final
-          path: |
-            dist/**
-            android/app/build/outputs/apk/release/*.apk
+          name: malaz-app-release
+          path: dist/**
