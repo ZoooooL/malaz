@@ -24,8 +24,10 @@ jobs:
         run: npx expo run:android --variant release --no-install
         continue-on-error: true
 
-      - name: Upload APK
+    - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: malaz-app-final
-          path: android/app/build/outputs/apk/release/*.apk
+          path: |
+            dist/**
+            android/app/build/outputs/apk/release/*.apk
