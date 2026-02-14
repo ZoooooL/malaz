@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "allowJs": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+
+    "baseUrl": "./",
+    "paths": {
+      "@hooks/*": ["app/hooks/*"],
+      "@components/*": ["app/components/*"],
+      "@screens/*": ["app/(screens)/*"],
+      "@lib/*": ["app/lib/*"],
+      "@utils/*": ["app/utils/*"],
+      "@assets/*": ["assets/*"]
+    },
+
+    "types": ["expo", "node"]
+  },
+
+  "include": [
+    "app",
+    "server",
+    "scripts",
+    "index.ts",
+    "index.tsx",
+    "expo-env.d.ts",
+    "expo-router-env.d.ts"
+  ],
+
+  "exclude": ["node_modules", "dist"]
+}
+``
