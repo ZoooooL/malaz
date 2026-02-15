@@ -1,1 +1,9 @@
-{\n  "compilerOptions": {\n    "baseUrl": ".",\n    "paths": {\n      "@components/*": ["components/*"],\n      "@hooks/*": ["hooks/*"]\n    }\n  }\n}
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@components/*": ["components/*"],
+      "@hooks/*": ["hooks/*"]
+    }
+  }
+}
