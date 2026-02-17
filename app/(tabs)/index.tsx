@@ -6,7 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 
 /**
- * Home Screen - Zoolodoo Dashboard
+ * Home Screen - Malaz Dashboard
  */
 export default function HomeScreen() {
   const colors = useColors();
@@ -22,10 +22,15 @@ export default function HomeScreen() {
         <View className="flex-1 gap-6">
           {/* Hero Section */}
           <View className="items-center gap-2">
-            <Text className="text-4xl font-bold text-foreground">Zoolodoo</Text>
+            <Text className="text-4xl font-bold text-foreground">Malaz</Text>
             <Text className="text-base text-muted text-center">
               مساعد الأوامر الصوتية الذكي
             </Text>
+            <View className={`mt-3 px-4 py-2 rounded-full ${state.error ? 'bg-red-100' : state.isInitializing ? 'bg-amber-100' : 'bg-green-100'}`}>
+              <Text className={`text-xs font-semibold ${state.error ? 'text-red-700' : state.isInitializing ? 'text-amber-700' : 'text-green-700'}`}>
+                {state.error ? 'يوجد خطأ في التهيئة' : state.isInitializing ? 'جاري تجهيز الخدمات...' : 'النظام جاهز لاستقبال الأوامر'}
+              </Text>
+            </View>
           </View>
 
           {/* Dashboard Cards */}
@@ -70,6 +75,12 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {state.error && (
+            <View className="bg-red-50 border border-red-200 rounded-xl p-3">
+              <Text className="text-sm text-red-700 text-center">{state.error}</Text>
+            </View>
+          )}
+
           {/* Quick Actions */}
           <View className="gap-2">
             <Text className="text-sm font-semibold text-foreground">نصائح</Text>
@@ -84,7 +95,7 @@ export default function HomeScreen() {
       {Platform.OS !== 'web' && (
         <TouchableOpacity
           onPress={handleVoiceCommand}
-          disabled={state.isListening}
+          disabled={state.isListening || state.isInitializing}
           style={{
             position: 'absolute',
             bottom: 80,
@@ -92,7 +103,7 @@ export default function HomeScreen() {
             width: 60,
             height: 60,
             borderRadius: 30,
-            backgroundColor: state.isListening ? '#EF4444' : colors.primary,
+            backgroundColor: state.isInitializing ? '#9CA3AF' : state.isListening ? '#EF4444' : colors.primary,
             justifyContent: 'center',
             alignItems: 'center',
             shadowColor: '#000',
