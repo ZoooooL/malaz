@@ -57,7 +57,12 @@ const config: ExpoConfig = {
   extra: {
     eas: {
       projectId: "02e316e6-9f80-4273-9843-4449a1980db5"
-    }
+    },
+    odooServerUrl: process.env.ODOO_SERVER_URL || process.env.EXPO_PUBLIC_ODOO_SERVER_URL || '',
+    odooDatabase: process.env.ODOO_DATABASE || process.env.EXPO_PUBLIC_ODOO_DATABASE || '',
+    odooUsername: process.env.ODOO_USERNAME || process.env.EXPO_PUBLIC_ODOO_USERNAME || '',
+    odooApiKey: process.env.ODOO_API_KEY || process.env.EXPO_PUBLIC_ODOO_API_KEY || '',
+    openAiApiKey: process.env.OPENAI_API_KEY || process.env.EXPO_PUBLIC_OPENAI_API_KEY || ''
   },
   plugins: [
     "expo-router",

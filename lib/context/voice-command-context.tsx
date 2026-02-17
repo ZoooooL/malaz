@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useReducer, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, ReactNode, useEffect } from 'react';
 import { CommandType, ParsedCommand, CommandParser } from '@/lib/services/command-parser';
-import { VoiceService } from '@/lib/services/voice-service';
-import { OdooService, OdooResponse } from '@/lib/services/odoo-service';
-import { OpenAIService } from '@/lib/services/openai-service';
+import { VoiceService, getVoiceService } from '@/lib/services/voice-service';
+import { OdooService, OdooResponse, getOdooService } from '@/lib/services/odoo-service';
+import { OpenAIService, getOpenAIService } from '@/lib/services/openai-service';
+import { getRuntimeConfig } from '@/lib/config/runtime-config';
 
 /**
  * حالة الأمر الفردي
@@ -26,6 +27,7 @@ export interface VoiceCommandContextState {
   isListening: boolean;
   currentCommand?: CommandState;
   error?: string;
+  isInitializing?: boolean;
   voiceService?: VoiceService;
   odooService?: OdooService;
   openaiService?: OpenAIService;
@@ -41,6 +43,7 @@ type VoiceCommandAction =
   | { type: 'UPDATE_COMMAND'; payload: Partial<CommandState> & { id: string } }
   | { type: 'SET_ERROR'; payload: string }
   | { type: 'CLEAR_ERROR' }
+  | { type: 'SET_INITIALIZING'; payload: boolean }
   | { type: 'INITIALIZE_SERVICES'; payload: { voiceService: VoiceService; odooService: OdooService; openaiService?: OpenAIService } }
   | { type: 'CLEAR_COMMANDS' };
 
@@ -88,12 +91,16 @@ function voiceCommandReducer(
     case 'CLEAR_ERROR':
       return { ...state, error: undefined };
 
+    case 'SET_INITIALIZING':
+      return { ...state, isInitializing: action.payload };
+
     case 'INITIALIZE_SERVICES':
       return {
         ...state,
         voiceService: action.payload.voiceService,
         odooService: action.payload.odooService,
         openaiService: action.payload.openaiService,
+        error: undefined,
       };
 
     case 'CLEAR_COMMANDS':
@@ -124,7 +131,70 @@ export function VoiceCommandProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(voiceCommandReducer, {
     commands: [],
     isListening: false,
+    isInitializing: true,
   });
+
+  useEffect(() => {
+    const initializeServices = async () => {
+      try {
+        const voiceService = getVoiceService();
+        const odooService = getOdooService();
+
+        const runtimeConfig = getRuntimeConfig();
+
+        if (!runtimeConfig.odooServerUrl) {
+          throw new Error('يرجى ضبط عنوان خادم Odoo قبل الاستخدام');
+        }
+
+        await odooService.initialize({
+          serverUrl: runtimeConfig.odooServerUrl,
+          database: runtimeConfig.odooDatabase,
+          username: runtimeConfig.odooUsername,
+          password: runtimeConfig.odooApiKey,
+          apiKey: runtimeConfig.odooApiKey,
+        });
+
+        try {
+          await odooService.login();
+        } catch {
+          // فشل تسجيل الدخول لا يمنع تشغيل التطبيق، قد ينجح عند استدعاء لاحق.
+        }
+
+        let openaiService: OpenAIService | undefined;
+        try {
+          openaiService = getOpenAIService();
+        } catch {
+          openaiService = undefined;
+        }
+
+        dispatch({
+          type: 'INITIALIZE_SERVICES',
+          payload: { voiceService, odooService, openaiService },
+        });
+        dispatch({ type: 'SET_INITIALIZING', payload: false });
+      } catch (error) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: error instanceof Error ? error.message : 'فشل تهيئة الخدمات',
+        });
+        dispatch({ type: 'SET_INITIALIZING', payload: false });
+      }
+    };
+
+    void initializeServices();
+  }, []);
+
+  /**
+   * التحدث برد
+   */
+  const speakResult = useCallback(
+    async (text: string) => {
+      if (state.voiceService) {
+        await state.voiceService.speak(text, 'ar');
+      }
+    },
+    [state.voiceService]
+  );
 
   /**
    * تنفيذ أمر صوتي
@@ -136,15 +206,19 @@ export function VoiceCommandProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      const normalizedText = state.openaiService
+        ? await state.openaiService.correctText(text).catch(() => text)
+        : text;
+
       const commandId = `cmd_${Date.now()}`;
-      const parsedCommand = CommandParser.parseCommand(text);
+      const parsedCommand = CommandParser.parseCommand(normalizedText);
 
       // إضافة الأمر إلى السجل
       dispatch({
         type: 'ADD_COMMAND',
         payload: {
           id: commandId,
-          originalText: text,
+          originalText: normalizedText,
           parsedCommand,
           isLoading: true,
           timestamp: Date.now(),
@@ -159,6 +233,10 @@ export function VoiceCommandProvider({ children }: { children: ReactNode }) {
         switch (parsedCommand.type) {
           case CommandType.SALES_TODAY:
             result = await state.odooService.getSalesToday();
+            break;
+
+          case CommandType.SALES_THIS_MONTH:
+            result = await state.odooService.getSalesThisMonth();
             break;
 
           case CommandType.UNPAID_INVOICES:
@@ -206,9 +284,13 @@ export function VoiceCommandProvider({ children }: { children: ReactNode }) {
 
         // تشغيل رد صوتي
         if (result.success) {
-          const message = `تم تنفيذ الأمر بنجاح. ${
+          const fallbackMessage = `تم تنفيذ الأمر بنجاح. ${
             result.data?.count ? `عدد النتائج: ${result.data.count}` : ''
           }`;
+          const message = state.openaiService
+            ? await state.openaiService.generateResponse(normalizedText, result).catch(() => fallbackMessage)
+            : fallbackMessage;
+
           await speakResult(message);
         } else {
           await speakResult(`حدث خطأ: ${result.error}`);
@@ -227,13 +309,18 @@ export function VoiceCommandProvider({ children }: { children: ReactNode }) {
         await speakResult(`حدث خطأ: ${errorMessage}`);
       }
     },
-    [state.odooService]
+    [state.odooService, state.openaiService, speakResult]
   );
 
   /**
    * بدء الاستماع
    */
   const startListening = useCallback(async () => {
+    if (state.isInitializing) {
+      dispatch({ type: 'SET_ERROR', payload: 'جاري تهيئة الخدمات، حاول بعد ثوانٍ قليلة' });
+      return;
+    }
+
     if (!state.voiceService) {
       dispatch({ type: 'SET_ERROR', payload: 'خدمة الصوت غير مهيأة' });
       return;
@@ -271,18 +358,6 @@ export function VoiceCommandProvider({ children }: { children: ReactNode }) {
   const clearCommands = useCallback(() => {
     dispatch({ type: 'CLEAR_COMMANDS' });
   }, []);
-
-  /**
-   * التحدث برد
-   */
-  const speakResult = useCallback(
-    async (text: string) => {
-      if (state.voiceService) {
-        await state.voiceService.speak(text, 'ar');
-      }
-    },
-    [state.voiceService]
-  );
 
   return (
     <VoiceCommandContext.Provider
