@@ -1,11 +1,14 @@
-name: Build Android App
+name: Build Android APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - work
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,18 +19,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-      - name: Build Android
-        run: |
-          export CI=1
-          npx expo export --platform android
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Upload Artifact
+      - name: Prebuild Android project
+        run: npx expo prebuild --platform android --non-interactive
+
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: malaz-app-release
-          path: dist/
+          name: malaz-apk-release
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
