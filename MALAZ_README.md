@@ -50,7 +50,6 @@
 ### من ملف APK
 1. ادخل إلى تبويب **Actions** في GitHub وشغّل workflow **Build Android APK** (أو ادفع commit إلى `main`/`work`)
 2. بعد اكتمال البناء، قم بتحميل artifact باسم `malaz-apk-release` ويحتوي على `app-release.apk`
-   - ملاحظة: تم ضبط البناء ليستخدم `npm install` بدل `npm ci` لتجنب فشل مزامنة lockfile في بيئات CI المختلفة.
 3. افتح الملف على هاتفك الأندرويد
 4. اتبع خطوات التثبيت
 5. افتح التطبيق وابدأ الاستخدام

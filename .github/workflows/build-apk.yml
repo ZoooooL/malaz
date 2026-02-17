@@ -28,10 +28,7 @@ jobs:
           java-version: '17'
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Ensure Gradle wrapper is executable
-        run: chmod +x android/gradlew
+        run: npm ci
 
       - name: Prebuild Android project
         run: npx expo prebuild --platform android --non-interactive
