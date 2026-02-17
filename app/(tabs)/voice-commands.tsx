@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, Text, View, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { useVoiceCommand } from '@/lib/context/voice-command-context';
@@ -106,7 +106,7 @@ export default function VoiceCommandsScreen() {
           <View className="items-center my-6">
             <TouchableOpacity
               onPress={isRecording ? handleStopRecording : handleStartRecording}
-              disabled={state.isListening && !isRecording}
+              disabled={state.isInitializing || (state.isListening && !isRecording)}
               className={`w-32 h-32 rounded-full items-center justify-center ${
                 isRecording || state.isListening
                   ? 'bg-red-500'
@@ -127,9 +127,15 @@ export default function VoiceCommandsScreen() {
               )}
             </TouchableOpacity>
             <Text className="mt-4 text-sm text-muted">
-              {isRecording || state.isListening ? 'جاري الاستماع...' : 'اضغط للبدء'}
+              {state.isInitializing ? 'جاري تجهيز الخدمات...' : isRecording || state.isListening ? 'جاري الاستماع...' : 'اضغط للبدء'}
             </Text>
           </View>
+
+          {state.isInitializing && (
+            <View className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+              <Text className="text-sm text-amber-700">جاري تحميل وربط خدمات Odoo والصوت...</Text>
+            </View>
+          )}
 
           {/* رسالة الخطأ */}
           {state.error && (

@@ -6,9 +6,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  */
 export interface OdooConfig {
   serverUrl: string;
-  database: string;
-  username: string;
-  password: string;
+  database?: string;
+  username?: string;
+  password?: string;
+  apiKey?: string;
 }
 
 /**
@@ -37,6 +38,12 @@ export class OdooService {
     this.axiosInstance = axios.create({
       baseURL: config.serverUrl,
       timeout: 10000,
+      headers: config.apiKey
+        ? {
+            Authorization: `Bearer ${config.apiKey}`,
+            'X-API-Key': config.apiKey,
+          }
+        : undefined,
     });
 
     // محاولة تحميل بيانات الجلسة المحفوظة
@@ -85,6 +92,10 @@ export class OdooService {
     try {
       if (!this.config || !this.axiosInstance) {
         throw new Error('لم يتم تهيئة الخدمة');
+      }
+
+      if (!this.config.database || !this.config.username || !this.config.password) {
+        return false;
       }
 
       const response = await this.axiosInstance.post('/web/session/authenticate', {
@@ -187,23 +198,84 @@ export class OdooService {
   }
 
   /**
+   * الحصول على مبيعات هذا الشهر
+   */
+  async getSalesThisMonth(): Promise<OdooResponse> {
+    try {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+
+      const result = await this.callJsonRpc('search_read', {
+        model: 'sale.order',
+        method: 'search_read',
+        args: [
+          [
+            ['date_order', '>=', startOfMonth],
+            ['date_order', '<', endOfMonth],
+            ['state', 'not in', ['draft', 'cancel']],
+          ],
+        ],
+        kwargs: {
+          fields: ['id', 'name', 'amount_total', 'partner_id', 'date_order'],
+        },
+      });
+
+      const totalAmount = result.reduce((sum: number, order: any) => sum + order.amount_total, 0);
+
+      return {
+        success: true,
+        data: {
+          orders: result,
+          totalAmount,
+          count: result.length,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'خطأ في الحصول على مبيعات الشهر',
+      };
+    }
+  }
+
+  /**
    * الحصول على الفواتير غير المدفوعة
    */
   async getUnpaidInvoices(): Promise<OdooResponse> {
     try {
-      const result = await this.callJsonRpc('search_read', {
-        model: 'account.invoice',
-        method: 'search_read',
-        args: [
-          [
-            ['state', '=', 'open'],
-            ['type', '=', 'out_invoice'],
+      let result: any[] = [];
+
+      try {
+        result = await this.callJsonRpc('search_read', {
+          model: 'account.move',
+          method: 'search_read',
+          args: [
+            [
+              ['move_type', '=', 'out_invoice'],
+              ['payment_state', 'in', ['not_paid', 'partial']],
+              ['state', '=', 'posted'],
+            ],
           ],
-        ],
-        kwargs: {
-          fields: ['id', 'number', 'amount_total', 'partner_id', 'date_invoice', 'date_due'],
-        },
-      });
+          kwargs: {
+            fields: ['id', 'name', 'amount_total', 'partner_id', 'invoice_date', 'invoice_date_due'],
+          },
+        });
+      } catch {
+        result = await this.callJsonRpc('search_read', {
+          model: 'account.invoice',
+          method: 'search_read',
+          args: [
+            [
+              ['state', '=', 'open'],
+              ['type', '=', 'out_invoice'],
+            ],
+          ],
+          kwargs: {
+            fields: ['id', 'number', 'amount_total', 'partner_id', 'date_invoice', 'date_due'],
+          },
+        });
+      }
 
       return {
         success: true,
