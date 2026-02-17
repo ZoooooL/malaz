@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { getRuntimeConfig } from '@/lib/config/runtime-config';
 
 /**
  * واجهة نتيجة تحليل OpenAI
@@ -235,9 +236,9 @@ let openaiServiceInstance: OpenAIService | null = null;
 
 export function getOpenAIService(): OpenAIService {
   if (!openaiServiceInstance) {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = getRuntimeConfig().openAiApiKey;
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is not set');
+      throw new Error('OPENAI_API_KEY is not set in runtime config');
     }
     openaiServiceInstance = new OpenAIService(apiKey);
   }
